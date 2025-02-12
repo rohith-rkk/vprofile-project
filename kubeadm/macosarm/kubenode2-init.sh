@@ -23,6 +23,9 @@ lsmod | grep overlay
 
 sysctl net.bridge.bridge-nf-call-iptables net.bridge.bridge-nf-call-ip6tables net.ipv4.ip_forward
 
+#Disable Swap
+sudo swapoff -a && sudo sed -i '/swap/d' /etc/fstab
+
 #Installing CRI-O#
 
 sudo apt-get update -y
@@ -53,3 +56,4 @@ sudo systemctl enable --now kubelet
 
 sleep 10
 /bin/bash /vagrant/cltjoincommand.sh
+

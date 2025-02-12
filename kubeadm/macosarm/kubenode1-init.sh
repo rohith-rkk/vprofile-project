@@ -23,6 +23,9 @@ lsmod | grep overlay
 
 sysctl net.bridge.bridge-nf-call-iptables net.bridge.bridge-nf-call-ip6tables net.ipv4.ip_forward
 
+#Disable Swap
+sudo swapoff -a && sudo sed -i '/swap/d' /etc/fstab
+
 #Installing CRI-O#
 
 sudo apt-get update -y
@@ -51,17 +54,5 @@ sudo apt-get install -y kubelet kubeadm kubectl
 sudo apt-mark hold kubelet kubeadm kubectl
 sudo systemctl enable --now kubelet
 
-sleep 12
-echo "Waiting for 120 Seconds...."
-echo "Lets initialize."
-
-IPADDR=192.168.33.2
-POD_CIDR=10.244.0.0/16
-NODENAME=kubemaster
-#kubeadm init --pod-network-cidr 10.244.0.0/16  --apiserver-advertise-address=192.168.33.2 > /tmp/kubeinitout.log
-kubeadm init --control-plane-endpoint=$IPADDR    --pod-network-cidr=$POD_CIDR --node-name $NODENAME --ignore-preflight-errors Swap &>> /tmp/initout.log
 sleep 10
-
-cat /tmp/initout.log | grep -A2 mkdir | /bin/bash
-sleep 10
-tail -2 /tmp/initout.log > /vagrant/cltjoincommand.sh
+/bin/bash /vagrant/cltjoincommand.sh
