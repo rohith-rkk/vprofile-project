@@ -1,5 +1,5 @@
 #!/bin/bash
-###KUBEMASTER###
+###KUBENODE###
 
 #Disable Swap
 sudo swapoff -a && sudo sed -i '/swap/d' /etc/fstab
