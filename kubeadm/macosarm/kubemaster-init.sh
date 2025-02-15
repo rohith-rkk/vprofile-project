@@ -1,6 +1,9 @@
 #!/bin/bash
 ###KUBEMASTER###
 
+#Disable Swap
+sudo swapoff -a && sudo sed -i '/swap/d' /etc/fstab
+
 #System Settings
 cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
 overlay
@@ -21,27 +24,20 @@ sudo sysctl --system
 lsmod | grep br_netfilter
 lsmod | grep overlay
 
-sysctl net.bridge.bridge-nf-call-iptables net.bridge.bridge-nf-call-ip6tables net.ipv4.ip_forward
-
-#Disable Swap
-sudo swapoff -a && sudo sed -i '/swap/d' /etc/fstab
+#sysctl net.bridge.bridge-nf-call-iptables net.bridge.bridge-nf-call-ip6tables net.ipv4.ip_forward
 
 
-#Installing CRI-O#
 
-sudo apt-get update -y
 
-sudo apt-get install -y software-properties-common curl apt-transport-https ca-certificates
-sudo mkdir -p -m 755 /etc/apt/keyrings
-curl -fsSL https://pkgs.k8s.io/addons:/cri-o:/prerelease:/main/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/cri-o-apt-keyring.gpg
-echo "deb [signed-by=/etc/apt/keyrings/cri-o-apt-keyring.gpg] https://pkgs.k8s.io/addons:/cri-o:/prerelease:/main/deb/ /" | tee /etc/apt/sources.list.d/cri-o.list
+#Installing Containerd#
+sudo apt update
+sudo apt install -y containerd
+sudo mkdir -p /etc/containerd
 
-sudo apt-get update -y
-sudo apt-get install -y cri-o
+sudo containerd config default | sudo tee /etc/containerd/config.toml
 
-sudo systemctl daemon-reload
-sudo systemctl enable crio --now
-sudo systemctl start crio.service
+sudo systemctl restart containerd
+
 
 
 
@@ -57,8 +53,10 @@ sudo apt-get update
 sudo apt-get install -y kubelet kubeadm kubectl
 sudo apt-mark hold kubelet kubeadm kubectl
 sudo systemctl enable --now kubelet
+sudo ufw allow 6443/tcp
 
-sleep 12
+
+sleep 120
 echo "Waiting for 120 Seconds...."
 echo "Lets initialize."
 
@@ -66,9 +64,12 @@ IPADDR=192.168.33.2
 POD_CIDR=10.244.0.0/16
 NODENAME=kubemaster
 #kubeadm init --pod-network-cidr 10.244.0.0/16  --apiserver-advertise-address=192.168.33.2 > /tmp/kubeinitout.log
-kubeadm init --control-plane-endpoint=$IPADDR    --pod-network-cidr=$POD_CIDR --node-name $NODENAME --ignore-preflight-errors Swap &>> /tmp/initout.log
-sleep 10
+kubeadm init --control-plane-endpoint=$IPADDR    --pod-network-cidr=$POD_CIDR --node-name $NODENAME --ignore-preflight-errors  Swap &>> /tmp/initout.log
+#sleep 10
 
 cat /tmp/initout.log | grep -A2 mkdir | /bin/bash
-sleep 10
+sleep 2
 tail -2 /tmp/initout.log > /vagrant/cltjoincommand.sh
+
+sleep 2
+kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.25.1/manifests/calico.yaml
